@@ -37,6 +37,18 @@ class XmppPrebindSession {
 		return $bosh_xml->asXML();
 	}
 
+	function get_request_xml_session() {
+		$bosh_xml = simplexml_load_string('<?xml version="1.0"?>'.
+		'<body xmlns="http://jabber.org/protocol/httpbind">'.
+			'<iq type="set" id="_session_auth_2" xmlns="jabber:client">'.
+				'<session xmlns="urn:ietf:params:xml:ns:xmpp-session"/>'.
+			'</iq>'.
+		'</body>');
+		$bosh_xml->addAttribute('rid', $this->rid);
+		$bosh_xml->addAttribute('sid', $this->sid);
+		return $bosh_xml->asXML();
+	}
+
 	function get_request_xml_bind() {
 		$bosh_xml = simplexml_load_string('<?xml version="1.0"?>'.
 		'<body xmlns="http://jabber.org/protocol/httpbind" xmpp:restart="true" '.
@@ -116,6 +128,19 @@ class XmppPrebindSession {
 			}
 		}
 	}
+
+	function start_session() {
+		if($bosh_xml_result = $this->send_request($this->bosh, $this->get_request_xml_session())) {
+			if($xml_result = simplexml_load_string($bosh_xml_result)) {
+				if (isset($xml_result->iq->bind->session)){
+					trigger_error("No Session returned for " . $this->username);
+					return false;
+				}
+				$this->rid++;
+				return true;
+			}
+		}
+	}
 }
 
 class converse extends rcube_plugin {
@@ -145,6 +170,10 @@ class converse extends rcube_plugin {
 		$xsess = new XmppPrebindSession($args['bosh_prebind_url'], $args['host'], $args['user'], $args['pass']);
 		if($xsess->init_connection()){
 			if (!$xsess->fetch_ids()) {
+				unset($_SESSION['xmpp']);
+				return;
+			}
+			if (!$xsess->start_session()) {
 				unset($_SESSION['xmpp']);
 				return;
 			}
