@@ -132,7 +132,7 @@ class XmppPrebindSession {
 	function start_session() {
 		if($bosh_xml_result = $this->send_request($this->bosh, $this->get_request_xml_session())) {
 			if($xml_result = simplexml_load_string($bosh_xml_result)) {
-				if (isset($xml_result->iq->bind->session)){
+				if (!isset($xml_result->iq->attributes()->type[0])){
 					trigger_error("No Session returned for " . $this->username);
 					return false;
 				}
